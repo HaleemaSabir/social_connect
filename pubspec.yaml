@@ -1,0 +1,52 @@
+name: social_connect
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Firebase
+  firebase_core: ^2.31.0
+  firebase_auth: ^4.17.3
+  cloud_firestore: ^4.15.9
+  firebase_storage: ^11.7.2
+
+  # Image Picker
+  image_picker: ^1.1.1
+
+  # Form validation
+  form_field_validator: ^1.1.0
+
+  # State management
+  provider: ^6.1.2
+
+  # Optional: iOS icons
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_native_splash: ^2.4.0  # ✅ splash dependency
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/default_avatar.png
+    - assets/logo.png
+
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/logo.png
+  android: true
+  ios: true
+  android_gravity: center
+  ios_content_mode: center
+  fullscreen: true
+
