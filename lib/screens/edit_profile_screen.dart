@@ -15,6 +15,8 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController bioController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
   File? _image;
   String? _imageUrl;
   bool isLoading = false;
@@ -27,7 +29,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> loadCurrentUserData() async {
     final uid = FirebaseAuth.instance.currentUser!.uid;
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final doc =
+    await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
     if (doc.exists) {
       nameController.text = doc['name'] ?? '';
@@ -38,10 +41,41 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> pickImage() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() => _image = File(picked.path));
-    }
+    final picker = ImagePicker();
+
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text("Choose from Gallery"),
+              onTap: () async {
+                final picked =
+                await picker.pickImage(source: ImageSource.gallery);
+                if (picked != null) {
+                  setState(() => _image = File(picked.path));
+                }
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text("Take a Photo"),
+              onTap: () async {
+                final picked =
+                await picker.pickImage(source: ImageSource.camera);
+                if (picked != null) {
+                  setState(() => _image = File(picked.path));
+                }
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<String> uploadImage(File file) async {
@@ -52,6 +86,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
     final uid = FirebaseAuth.instance.currentUser!.uid;
     setState(() => isLoading = true);
 
@@ -68,16 +104,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'imageUrl': imageUrl,
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated!')),
-      );
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully ✅')),
+        );
+        Navigator.pop(context);
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error: $e")),
       );
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -87,44 +125,65 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ? FileImage(_image!)
         : (_imageUrl != null && _imageUrl!.isNotEmpty
         ? NetworkImage(_imageUrl!)
-        : const AssetImage('assets/default_avatar.png')) as ImageProvider;
+        : const AssetImage('assets/default_avatar.png'))
+    as ImageProvider;
 
     return Scaffold(
       appBar: AppBar(title: const Text("Edit Profile"), backgroundColor: Colors.teal),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            GestureDetector(
-              onTap: pickImage,
-              child: CircleAvatar(
-                radius: 50,
-                backgroundImage: imageWidget,
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  GestureDetector(
+                    onTap: pickImage,
+                    child: CircleAvatar(
+                      radius: 55,
+                      backgroundImage: imageWidget,
+                      child: Align(
+                        alignment: Alignment.bottomRight,
+                        child: CircleAvatar(
+                          backgroundColor: Colors.teal,
+                          radius: 18,
+                          child: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: "Name"),
+                    validator: (val) =>
+                    val == null || val.isEmpty ? "Name cannot be empty" : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: bioController,
+                    decoration: const InputDecoration(labelText: "Bio"),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: saveProfile,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      minimumSize: const Size.fromHeight(50),
+                    ),
+                    child: const Text("Save Changes"),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: "Name"),
+          ),
+          if (isLoading)
+            Container(
+              color: Colors.black45,
+              child: const Center(child: CircularProgressIndicator(color: Colors.white)),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: bioController,
-              decoration: const InputDecoration(labelText: "Bio"),
-            ),
-            const SizedBox(height: 24),
-            isLoading
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-              onPressed: saveProfile,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal,
-                minimumSize: const Size.fromHeight(50),
-              ),
-              child: const Text("Save Changes"),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }

@@ -4,7 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:social_connect/services/auth_service.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final String? userId; // if null, show current user
+  const ProfileScreen({super.key, this.userId});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -15,6 +16,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String name = "";
   String bio = "";
   String imageUrl = "";
+  List followers = [];
+  List following = [];
+
+  bool isCurrentUser = true;
+  bool isFollowing = false;
 
   @override
   void initState() {
@@ -23,15 +29,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void fetchProfile() async {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final currentUid = FirebaseAuth.instance.currentUser!.uid;
+    final uid = widget.userId ?? currentUid;
+    setState(() {
+      isCurrentUser = uid == currentUid;
+    });
+
     final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
     if (doc.exists) {
       setState(() {
         name = doc['name'] ?? '';
         bio = doc['bio'] ?? '';
         imageUrl = doc['imageUrl'] ?? '';
+        followers = doc['followers'] ?? [];
+        following = doc['following'] ?? [];
+        isFollowing = followers.contains(currentUid);
       });
     }
+  }
+
+  Future<void> toggleFollow() async {
+    final currentUid = FirebaseAuth.instance.currentUser!.uid;
+    final targetUid = widget.userId;
+
+    if (targetUid == null) return;
+
+    final targetRef = FirebaseFirestore.instance.collection('users').doc(targetUid);
+    final currentRef = FirebaseFirestore.instance.collection('users').doc(currentUid);
+
+    if (isFollowing) {
+      // Unfollow
+      await targetRef.update({
+        'followers': FieldValue.arrayRemove([currentUid])
+      });
+      await currentRef.update({
+        'following': FieldValue.arrayRemove([targetUid])
+      });
+    } else {
+      // Follow
+      await targetRef.update({
+        'followers': FieldValue.arrayUnion([currentUid])
+      });
+      await currentRef.update({
+        'following': FieldValue.arrayUnion([targetUid])
+      });
+    }
+
+    setState(() {
+      isFollowing = !isFollowing;
+    });
   }
 
   void logout() async {
@@ -45,13 +91,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("My Profile"),
+        title: Text(isCurrentUser ? "My Profile" : "$name's Profile"),
         backgroundColor: Colors.teal,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: logout,
-          ),
+          if (isCurrentUser)
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: logout,
+            ),
         ],
       ),
       body: Padding(
@@ -70,16 +117,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(bio, style: const TextStyle(fontSize: 16, color: Colors.grey)),
+            const SizedBox(height: 8),
+            Text("Followers: ${followers.length}  •  Following: ${following.length}"),
             const SizedBox(height: 24),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.edit),
-              label: const Text("Edit Profile"),
-              onPressed: () => Navigator.pushNamed(context, '/edit-profile'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal,
-                minimumSize: const Size.fromHeight(50),
+
+            if (isCurrentUser)
+              ElevatedButton.icon(
+                icon: const Icon(Icons.edit),
+                label: const Text("Edit Profile"),
+                onPressed: () => Navigator.pushNamed(context, '/edit-profile'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal,
+                  minimumSize: const Size.fromHeight(50),
+                ),
+              )
+            else
+              ElevatedButton(
+                onPressed: toggleFollow,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isFollowing ? Colors.grey : Colors.teal,
+                  minimumSize: const Size.fromHeight(50),
+                ),
+                child: Text(isFollowing ? "Unfollow" : "Follow"),
               ),
-            ),
           ],
         ),
       ),

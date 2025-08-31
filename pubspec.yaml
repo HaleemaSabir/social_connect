@@ -15,31 +15,35 @@ dependencies:
   firebase_auth: ^4.17.3
   cloud_firestore: ^4.15.9
   firebase_storage: ^11.7.2
+  firebase_messaging: ^14.9.4
 
-  # Image Picker
+  # Image Picker & Media
   image_picker: ^1.1.1
+  flutter_image_compress: ^2.3.0
+  cached_network_image: ^3.3.1
 
-  # Form validation
+
+  # Utils
+  uuid: ^4.5.1
   form_field_validator: ^1.1.0
 
   # State management
   provider: ^6.1.2
 
-  # Optional: iOS icons
+  # UI
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
-  flutter_native_splash: ^2.4.0  # ✅ splash dependency
+  flutter_native_splash: ^2.4.0
 
 flutter:
   uses-material-design: true
   assets:
     - assets/default_avatar.png
     - assets/logo.png
-
 
 flutter_native_splash:
   color: "#FFFFFF"
@@ -49,4 +53,3 @@ flutter_native_splash:
   android_gravity: center
   ios_content_mode: center
   fullscreen: true
-

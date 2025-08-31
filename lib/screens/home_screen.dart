@@ -37,6 +37,24 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
         actions: [
           IconButton(
+            icon: const Icon(Icons.chat),
+            onPressed: () {
+              Navigator.pushNamed(context, '/chats');
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              Navigator.pushNamed(context, '/search');
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              Navigator.pushNamed(context, '/notifications');
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.notifications),
             onPressed: () {
               Navigator.pushNamed(context, '/notifications');
@@ -44,7 +62,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      // ✅ Use IndexedStack to preserve state of screens
       body: IndexedStack(
         index: _selectedIndex,
         children: _screens,

@@ -79,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   labelText: 'Email',
                   prefixIcon: Icon(Icons.email),
                 ),
-                validator: EmailValidator(errorText: "Enter a valid email"),
+                validator: EmailValidator(errorText: "Enter a valid email").call,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -89,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   labelText: 'Password',
                   prefixIcon: Icon(Icons.lock),
                 ),
-                validator: MinLengthValidator(6, errorText: "Min 6 characters"),
+                validator: MinLengthValidator(6, errorText: "Min 6 characters").call,
               ),
               const SizedBox(height: 24),
               isLoading

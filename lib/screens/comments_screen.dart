@@ -14,22 +14,54 @@ class CommentsScreen extends StatefulWidget {
 class _CommentsScreenState extends State<CommentsScreen> {
   final TextEditingController _commentController = TextEditingController();
 
-  void postComment() async {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
-    final text = _commentController.text.trim();
+  Future<void> postComment() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
 
-    if (text.isNotEmpty) {
+    final text = _commentController.text.trim();
+    if (text.isEmpty) return;
+
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .get();
+
+    final name = userDoc['name'] ?? currentUser.email;
+    final imageUrl = userDoc['imageUrl'] ?? '';
+
+    // Save comment
+    await FirebaseFirestore.instance
+        .collection('posts')
+        .doc(widget.postId)
+        .collection('comments')
+        .add({
+      'userId': currentUser.uid,
+      'userName': name,
+      'userImage': imageUrl,
+      'text': text,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
+    // Notify post owner
+    final postDoc = await FirebaseFirestore.instance
+        .collection('posts')
+        .doc(widget.postId)
+        .get();
+
+    if (postDoc.exists && postDoc['userId'] != currentUser.uid) {
       await FirebaseFirestore.instance
-          .collection('posts')
-          .doc(widget.postId)
-          .collection('comments')
+          .collection('users')
+          .doc(postDoc['userId'])
+          .collection('notifications')
           .add({
-        'userId': uid,
-        'text': text,
+        'title': 'New Comment 💬',
+        'body': '$name commented: $text',
         'timestamp': FieldValue.serverTimestamp(),
+        'postId': widget.postId,
       });
-      _commentController.clear();
     }
+
+    _commentController.clear();
   }
 
   @override
@@ -48,15 +80,32 @@ class _CommentsScreenState extends State<CommentsScreen> {
             child: StreamBuilder<QuerySnapshot>(
               stream: commentsRef.snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return const CircularProgressIndicator();
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
                 final comments = snapshot.data!.docs;
+
+                if (comments.isEmpty) {
+                  return const Center(child: Text("No comments yet."));
+                }
+
                 return ListView.builder(
                   itemCount: comments.length,
                   itemBuilder: (context, index) {
                     final comment = comments[index];
+                    final name = comment['userName'] ?? 'Unknown';
+                    final text = comment['text'] ?? '';
+                    final imageUrl = comment['userImage'] ?? '';
+
                     return ListTile(
-                      title: Text(comment['text']),
-                      subtitle: Text(comment['userId']),
+                      leading: CircleAvatar(
+                        backgroundImage: imageUrl.isNotEmpty
+                            ? NetworkImage(imageUrl)
+                            : const AssetImage('assets/default_avatar.png')
+                        as ImageProvider,
+                      ),
+                      title: Text(name),
+                      subtitle: Text(text),
                     );
                   },
                 );
@@ -75,7 +124,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.send),
+                  icon: const Icon(Icons.send, color: Colors.teal),
                   onPressed: postComment,
                 ),
               ],
